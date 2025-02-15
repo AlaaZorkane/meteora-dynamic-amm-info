@@ -1,0 +1,22 @@
+[toolchain]
+anchor_version = "0.28.0"
+
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+meteora-vp = "expo9shvoWz6Bi96TsomKkWTAWYAm4ywuzP2u8EAXaV"
+
+[programs.devnet]
+meteora-vp = "expo9shvoWz6Bi96TsomKkWTAWYAm4ywuzP2u8EAXaV"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Devnet"
+wallet = "~/keys/alzo.sol.json"
+
+[scripts]
+test = "bun run test"
