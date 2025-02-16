@@ -33,6 +33,7 @@ pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> 
             constant_product_compute_invariant(token_a_amount, token_b_amount)
         }
         CurveType::Stable { amp, .. } => {
+            msg!("amp: {}", amp);
             fast_compute_stable_invariant(amp, token_a_amount, token_b_amount)
         }
     };

@@ -30,7 +30,8 @@
         "useImportExtensions": "off"
       },
       "style": {
-        "noNamespaceImport": "off"
+        "noNamespaceImport": "off",
+        "useNamingConvention": "off"
       },
       "performance": {
         "noReExportAll": "off",
