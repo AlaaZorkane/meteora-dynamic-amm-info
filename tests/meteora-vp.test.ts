@@ -23,23 +23,9 @@ import {
   createDevnetSolanaRpcSubscriptions,
 } from "./__setup__.ts";
 import { getGetVirtualPriceInstruction } from "../sdk/meteora-vp/js/src/generated/index.ts";
-import {
-  curveType,
-  getPoolDecoder,
-} from "../sdk/dynamic-amm/js/src/generated/index.ts";
+import { getPoolDecoder } from "../sdk/dynamic-amm/js/src/generated/index.ts";
 import { getVaultDecoder } from "../sdk/dynamic-vault/js/src/generated/index.ts";
 import Bun from "bun";
-import {
-  calculatePoolInfo,
-  ConstantProductSwap,
-  StableSwap,
-} from "@meteora-ag/dynamic-amm-sdk";
-import { fetchSysvarClock, type SysvarClock } from "@solana/sysvars";
-import { BN } from "bn.js";
-import type { SwapCurve } from "@meteora-ag/dynamic-amm-sdk/dist/cjs/src/amm/curve/index";
-import type { TokenMultiplier } from "@meteora-ag/dynamic-amm-sdk/dist/cjs/src/amm/types/index";
-import { normalizeDepeg, normalizeVaultState } from "./utils/meteora.ts";
-import { PublicKey } from "@solana/web3.js-legacy";
 
 const log = createLogger("meteora-vp");
 
@@ -54,9 +40,9 @@ describe("Meteora Virtual Price Program", () => {
   }>;
 
   // const devPool = address("FX8rBiRLHKoSzGM8GZbeMxMiVdNLiX4wfuR6BWLSaf1F");
-  // const devPool = address("FZgdEqq6rwsWnsZ83Ez2pyJqPdPGfDvzYhrbvcboTPtf");
+  const devPool = address("FZgdEqq6rwsWnsZ83Ez2pyJqPdPGfDvzYhrbvcboTPtf");
   // const devPool = address("7Q5fLUP4fjTr1pfMXJA2JiQt2kbX8Dc6oo17mKw2qxKi");
-  const devPool = address("2rkn2yM4wJcHPV57T8fPWeBksrfSpiNZoEjRgjtxNDEQ");
+  // const devPool = address("2rkn2yM4wJcHPV57T8fPWeBksrfSpiNZoEjRgjtxNDEQ");
   const programId = address("expo9shvoWz6Bi96TsomKkWTAWYAm4ywuzP2u8EAXaV");
 
   beforeAll(async () => {
@@ -100,6 +86,7 @@ describe("Meteora Virtual Price Program", () => {
     const pool = getPoolDecoder().decode(rawPoolData);
 
     log.info("CurveType: %s", pool.curveType.__kind);
+    log.info("Pool: %s", devPool);
 
     const aVaultData = await rpc
       .getAccountInfo(pool.aVault, {
@@ -150,8 +137,6 @@ describe("Meteora Virtual Price Program", () => {
     const signedTx = await signTransactionMessageWithSigners(txMsg);
     const tx = getSignatureFromTransaction(signedTx);
 
-    const clock: SysvarClock = await fetchSysvarClock(rpc);
-
     const poolVaultAlp = await rpc
       .getTokenAccountBalance(address(pool.aVaultLp))
       .send();
@@ -171,47 +156,6 @@ describe("Meteora Virtual Price Program", () => {
     assert(poolVaultAsupply.value, "poolVaultAsupply not found");
     assert(poolVaultBsupply.value, "poolVaultBsupply not found");
     assert(poolLpSupply.value, "poolLpSupply not found");
-
-    let swapCurve: SwapCurve;
-    if (pool.curveType.__kind === "ConstantProduct") {
-      swapCurve = new ConstantProductSwap();
-    } else if (pool.curveType.__kind === "Stable") {
-      const curve = curveType(pool.curveType.__kind, pool.curveType);
-      const tokenMultiplier: TokenMultiplier = {
-        precisionFactor: curve.tokenMultiplier.precisionFactor,
-        tokenAMultiplier: new BN(
-          curve.tokenMultiplier.tokenAMultiplier.toString(),
-        ),
-        tokenBMultiplier: new BN(
-          curve.tokenMultiplier.tokenBMultiplier.toString(),
-        ),
-      };
-      const depeg = normalizeDepeg(curve.depeg);
-      swapCurve = new StableSwap(
-        Number(curve.amp),
-        tokenMultiplier,
-        depeg,
-        new Map(),
-        new BN(clock.unixTimestamp.toString()),
-        new PublicKey(devPool),
-      );
-    } else {
-      assert.fail("unreacheable");
-    }
-
-    const poolInfo = calculatePoolInfo(
-      new BN(Number(clock.unixTimestamp)),
-      new BN(poolVaultAlp.value.amount),
-      new BN(poolVaultBlp.value.amount),
-      new BN(poolVaultAsupply.value.amount),
-      new BN(poolVaultBsupply.value.amount),
-      new BN(poolLpSupply.value.amount),
-      swapCurve,
-      normalizeVaultState(aVault),
-      normalizeVaultState(bVault),
-    );
-
-    log.info({ poolInfo }, "Pool Info");
 
     try {
       await sendAndConfirm(signedTx, {

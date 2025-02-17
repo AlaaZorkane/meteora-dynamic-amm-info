@@ -1,10 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, TokenAccount};
-use dynamic_amm::state::{CurveType, Pool};
+use dynamic_amm::{
+    constants::depeg::PRECISION,
+    state::{CurveType, DepegType, Pool},
+};
 use dynamic_vault::state::Vault;
 
 use crate::{
-    constant_product_compute_invariant, fast_compute_stable_invariant, VIRTUAL_PRICE_PRECISION,
+    constant_product_compute_invariant, fast_compute_stable_invariant, stable_upscale_token_a,
+    stable_upscale_token_b, VIRTUAL_PRICE_PRECISION,
 };
 
 pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> {
@@ -25,20 +29,34 @@ pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> 
         .get_amount_by_share(on_chain_time, b_vault_lp.amount, b_vault_lp_mint.supply)
         .unwrap();
 
-    msg!("token_a_amount: {}", token_a_amount);
-    msg!("token_b_amount: {}", token_b_amount);
-
     let invariant = match ctx.accounts.pool.curve_type {
         CurveType::ConstantProduct => {
-            constant_product_compute_invariant(token_a_amount, token_b_amount)
+            constant_product_compute_invariant(token_a_amount as u128, token_b_amount as u128)
         }
-        CurveType::Stable { amp, .. } => {
-            msg!("amp: {}", amp);
-            fast_compute_stable_invariant(amp, token_a_amount, token_b_amount)
+        CurveType::Stable {
+            amp,
+            depeg,
+            token_multiplier,
+            ..
+        } => {
+            let upscaled_token_a_amount =
+                stable_upscale_token_a(&token_multiplier, &depeg, token_a_amount as u128).unwrap();
+            let upscaled_token_b_amount =
+                stable_upscale_token_b(&token_multiplier, &depeg, token_b_amount as u128).unwrap();
+
+            let mut d = fast_compute_stable_invariant(
+                amp,
+                upscaled_token_a_amount,
+                upscaled_token_b_amount,
+            );
+
+            if depeg.depeg_type != DepegType::None {
+                d = d.checked_div(PRECISION as u128).unwrap();
+            }
+
+            d
         }
     };
-
-    msg!("invariant: {}", invariant);
 
     let virtual_price = if pool_lp_supply == 0 {
         VIRTUAL_PRICE_PRECISION
@@ -49,7 +67,6 @@ pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> 
             .checked_div(pool_lp_supply as u128)
             .unwrap()
     };
-
     let virtual_price_display = virtual_price as f64 / VIRTUAL_PRICE_PRECISION as f64;
 
     msg!("virtual_price: {}", virtual_price);

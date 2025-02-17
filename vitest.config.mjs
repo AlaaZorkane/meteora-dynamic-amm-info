@@ -6,5 +6,6 @@ export default defineConfig({
   test: {
     watch: false,
     environment: "node",
+    testTimeout: 100000
   },
 });
