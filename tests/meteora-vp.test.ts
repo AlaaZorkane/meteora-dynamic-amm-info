@@ -15,7 +15,7 @@ import {
   type Blockhash,
   type KeyPairSigner,
 } from "@solana/web3.js";
-import { createLogger, explorerUrl } from "./utils/helpers.ts";
+import { createLogger, explorerUrl, meteoraDevUrl } from "./utils/helpers.ts";
 import { beforeAll, beforeEach, describe, it } from "vitest";
 import { assert } from "chai";
 import {
@@ -39,10 +39,8 @@ describe("Meteora Virtual Price Program", () => {
     lastValidBlockHeight: bigint;
   }>;
 
-  // const devPool = address("FX8rBiRLHKoSzGM8GZbeMxMiVdNLiX4wfuR6BWLSaf1F");
-  const devPool = address("FZgdEqq6rwsWnsZ83Ez2pyJqPdPGfDvzYhrbvcboTPtf");
-  // const devPool = address("7Q5fLUP4fjTr1pfMXJA2JiQt2kbX8Dc6oo17mKw2qxKi");
-  // const devPool = address("2rkn2yM4wJcHPV57T8fPWeBksrfSpiNZoEjRgjtxNDEQ");
+  const stablePool = address("FZgdEqq6rwsWnsZ83Ez2pyJqPdPGfDvzYhrbvcboTPtf");
+  const volatilePool = address("54EBJ18CS56CgUsQ5UEbYiWTztYVucLfKjuL7vN1AUyA");
   const programId = address("expo9shvoWz6Bi96TsomKkWTAWYAm4ywuzP2u8EAXaV");
 
   beforeAll(async () => {
@@ -73,9 +71,9 @@ describe("Meteora Virtual Price Program", () => {
     latestBlockhash = value;
   });
 
-  it("successfully calls the getVirtualPrice function", async () => {
+  it("successful calculation of a volatile pool", async () => {
     const poolData = await rpc
-      .getAccountInfo(devPool, {
+      .getAccountInfo(volatilePool, {
         encoding: "base64",
       })
       .send();
@@ -86,7 +84,7 @@ describe("Meteora Virtual Price Program", () => {
     const pool = getPoolDecoder().decode(rawPoolData);
 
     log.info("CurveType: %s", pool.curveType.__kind);
-    log.info("Pool: %s", devPool);
+    log.info("Pool: %s", volatilePool);
 
     const aVaultData = await rpc
       .getAccountInfo(pool.aVault, {
@@ -110,9 +108,8 @@ describe("Meteora Virtual Price Program", () => {
 
     const instruction = getGetVirtualPriceInstruction(
       {
-        pool: devPool,
+        pool: volatilePool,
         lpMint: pool.lpMint,
-        payer: signer,
         aVault: pool.aVault,
         bVault: pool.bVault,
         aVaultLpMint: aVault.lpMint,
@@ -163,6 +160,105 @@ describe("Meteora Virtual Price Program", () => {
       });
       log.info("signature: %s", tx);
       log.info("explorer url: %s", explorerUrl(tx));
+      log.info("pool url: %s", meteoraDevUrl(volatilePool));
+    } catch (error: unknown) {
+      if (isSolanaError(error)) {
+        log.error(error.context);
+        assert.fail(error.message);
+      }
+    }
+  });
+
+  it("successful calculation of a stable pool", async () => {
+    const poolData = await rpc
+      .getAccountInfo(stablePool, {
+        encoding: "base64",
+      })
+      .send();
+
+    assert(poolData.value?.data, "Pool not found");
+
+    const rawPoolData = getBase64Encoder().encode(poolData.value?.data[0]);
+    const pool = getPoolDecoder().decode(rawPoolData);
+
+    log.info("CurveType: %s", pool.curveType.__kind);
+    log.info("Pool: %s", stablePool);
+
+    const aVaultData = await rpc
+      .getAccountInfo(pool.aVault, {
+        encoding: "base64",
+      })
+      .send();
+    const bVaultData = await rpc
+      .getAccountInfo(pool.bVault, {
+        encoding: "base64",
+      })
+      .send();
+
+    assert(aVaultData.value?.data, "a_vault account not found");
+    assert(bVaultData.value?.data, "b_vault account not found");
+
+    const rawAvaultData = getBase64Encoder().encode(aVaultData.value?.data[0]);
+    const aVault = getVaultDecoder().decode(rawAvaultData);
+
+    const rawBvaultData = getBase64Encoder().encode(bVaultData.value?.data[0]);
+    const bVault = getVaultDecoder().decode(rawBvaultData);
+
+    const instruction = getGetVirtualPriceInstruction(
+      {
+        pool: stablePool,
+        lpMint: pool.lpMint,
+        aVault: pool.aVault,
+        bVault: pool.bVault,
+        aVaultLpMint: aVault.lpMint,
+        bVaultLpMint: bVault.lpMint,
+        aVaultLp: pool.aVaultLp,
+        bVaultLp: pool.bVaultLp,
+      },
+      {
+        programAddress: programId,
+      },
+    );
+
+    const txMsg = pipe(
+      createTransactionMessage({
+        version: 0,
+      }),
+      (tx) => setTransactionMessageFeePayerSigner(signer, tx),
+      (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+      (tx) => appendTransactionMessageInstruction(instruction, tx),
+    );
+
+    const signedTx = await signTransactionMessageWithSigners(txMsg);
+    const tx = getSignatureFromTransaction(signedTx);
+
+    const poolVaultAlp = await rpc
+      .getTokenAccountBalance(address(pool.aVaultLp))
+      .send();
+    const poolVaultBlp = await rpc
+      .getTokenAccountBalance(address(pool.bVaultLp))
+      .send();
+    const poolVaultAsupply = await rpc
+      .getTokenSupply(address(aVault.lpMint))
+      .send();
+    const poolVaultBsupply = await rpc
+      .getTokenSupply(address(bVault.lpMint))
+      .send();
+    const poolLpSupply = await rpc.getTokenSupply(address(pool.lpMint)).send();
+
+    assert(poolVaultAlp.value, "poolVaultALp not found");
+    assert(poolVaultBlp.value, "poolVaultBLp not found");
+    assert(poolVaultAsupply.value, "poolVaultAsupply not found");
+    assert(poolVaultBsupply.value, "poolVaultBsupply not found");
+    assert(poolLpSupply.value, "poolLpSupply not found");
+
+    try {
+      await sendAndConfirm(signedTx, {
+        commitment: "confirmed",
+      });
+      log.info("signature: %s", tx);
+      log.info("explorer url: %s", explorerUrl(tx));
+      log.info("pool url: %s", meteoraDevUrl(stablePool));
     } catch (error: unknown) {
       if (isSolanaError(error)) {
         log.error(error.context);

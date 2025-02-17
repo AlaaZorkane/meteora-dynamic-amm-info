@@ -20,14 +20,11 @@ import {
   type Decoder,
   type Encoder,
   type IAccountMeta,
-  type IAccountSignerMeta,
   type IInstruction,
   type IInstructionWithAccounts,
   type IInstructionWithData,
   type ReadonlyAccount,
   type ReadonlyUint8Array,
-  type TransactionSigner,
-  type WritableSignerAccount,
 } from '@solana/web3.js';
 import { METEORA_VP_PROGRAM_ADDRESS } from '../programs';
 import { getAccountMetaFactory, type ResolvedAccount } from '../shared';
@@ -44,7 +41,6 @@ export function getGetVirtualPriceDiscriminatorBytes() {
 
 export type GetVirtualPriceInstruction<
   TProgram extends string = typeof METEORA_VP_PROGRAM_ADDRESS,
-  TAccountPayer extends string | IAccountMeta<string> = string,
   TAccountPool extends string | IAccountMeta<string> = string,
   TAccountLpMint extends string | IAccountMeta<string> = string,
   TAccountAVaultLpMint extends string | IAccountMeta<string> = string,
@@ -58,10 +54,6 @@ export type GetVirtualPriceInstruction<
   IInstructionWithData<Uint8Array> &
   IInstructionWithAccounts<
     [
-      TAccountPayer extends string
-        ? WritableSignerAccount<TAccountPayer> &
-            IAccountSignerMeta<TAccountPayer>
-        : TAccountPayer,
       TAccountPool extends string
         ? ReadonlyAccount<TAccountPool>
         : TAccountPool,
@@ -120,7 +112,6 @@ export function getGetVirtualPriceInstructionDataCodec(): Codec<
 }
 
 export type GetVirtualPriceInput<
-  TAccountPayer extends string = string,
   TAccountPool extends string = string,
   TAccountLpMint extends string = string,
   TAccountAVaultLpMint extends string = string,
@@ -130,8 +121,6 @@ export type GetVirtualPriceInput<
   TAccountAVault extends string = string,
   TAccountBVault extends string = string,
 > = {
-  payer: TransactionSigner<TAccountPayer>;
-  /** Pool account (PDA) */
   pool: Address<TAccountPool>;
   /** LP token mint of the pool */
   lpMint: Address<TAccountLpMint>;
@@ -150,7 +139,6 @@ export type GetVirtualPriceInput<
 };
 
 export function getGetVirtualPriceInstruction<
-  TAccountPayer extends string,
   TAccountPool extends string,
   TAccountLpMint extends string,
   TAccountAVaultLpMint extends string,
@@ -162,7 +150,6 @@ export function getGetVirtualPriceInstruction<
   TProgramAddress extends Address = typeof METEORA_VP_PROGRAM_ADDRESS,
 >(
   input: GetVirtualPriceInput<
-    TAccountPayer,
     TAccountPool,
     TAccountLpMint,
     TAccountAVaultLpMint,
@@ -175,7 +162,6 @@ export function getGetVirtualPriceInstruction<
   config?: { programAddress?: TProgramAddress }
 ): GetVirtualPriceInstruction<
   TProgramAddress,
-  TAccountPayer,
   TAccountPool,
   TAccountLpMint,
   TAccountAVaultLpMint,
@@ -190,7 +176,6 @@ export function getGetVirtualPriceInstruction<
 
   // Original accounts.
   const originalAccounts = {
-    payer: { value: input.payer ?? null, isWritable: true },
     pool: { value: input.pool ?? null, isWritable: false },
     lpMint: { value: input.lpMint ?? null, isWritable: false },
     aVaultLpMint: { value: input.aVaultLpMint ?? null, isWritable: false },
@@ -208,7 +193,6 @@ export function getGetVirtualPriceInstruction<
   const getAccountMeta = getAccountMetaFactory(programAddress, 'programId');
   const instruction = {
     accounts: [
-      getAccountMeta(accounts.payer),
       getAccountMeta(accounts.pool),
       getAccountMeta(accounts.lpMint),
       getAccountMeta(accounts.aVaultLpMint),
@@ -222,7 +206,6 @@ export function getGetVirtualPriceInstruction<
     data: getGetVirtualPriceInstructionDataEncoder().encode({}),
   } as GetVirtualPriceInstruction<
     TProgramAddress,
-    TAccountPayer,
     TAccountPool,
     TAccountLpMint,
     TAccountAVaultLpMint,
@@ -242,23 +225,21 @@ export type ParsedGetVirtualPriceInstruction<
 > = {
   programAddress: Address<TProgram>;
   accounts: {
-    payer: TAccountMetas[0];
-    /** Pool account (PDA) */
-    pool: TAccountMetas[1];
+    pool: TAccountMetas[0];
     /** LP token mint of the pool */
-    lpMint: TAccountMetas[2];
+    lpMint: TAccountMetas[1];
     /** LP token mint of vault A */
-    aVaultLpMint: TAccountMetas[3];
+    aVaultLpMint: TAccountMetas[2];
     /** LP token mint of vault B */
-    bVaultLpMint: TAccountMetas[4];
+    bVaultLpMint: TAccountMetas[3];
     /** LP token account of vault A. Used to receive/burn the vault LP upon deposit/withdraw from the vault. */
-    aVaultLp: TAccountMetas[5];
+    aVaultLp: TAccountMetas[4];
     /** LP token account of vault B. Used to receive/burn the vault LP upon deposit/withdraw from the vault. */
-    bVaultLp: TAccountMetas[6];
+    bVaultLp: TAccountMetas[5];
     /** Vault account for token a. token a of the pool will be deposit / withdraw from this vault account. */
-    aVault: TAccountMetas[7];
+    aVault: TAccountMetas[6];
     /** Vault account for token b. token b of the pool will be deposit / withdraw from this vault account. */
-    bVault: TAccountMetas[8];
+    bVault: TAccountMetas[7];
   };
   data: GetVirtualPriceInstructionData;
 };
@@ -271,7 +252,7 @@ export function parseGetVirtualPriceInstruction<
     IInstructionWithAccounts<TAccountMetas> &
     IInstructionWithData<Uint8Array>
 ): ParsedGetVirtualPriceInstruction<TProgram, TAccountMetas> {
-  if (instruction.accounts.length < 9) {
+  if (instruction.accounts.length < 8) {
     // TODO: Coded error.
     throw new Error('Not enough accounts');
   }
@@ -284,7 +265,6 @@ export function parseGetVirtualPriceInstruction<
   return {
     programAddress: instruction.programAddress,
     accounts: {
-      payer: getNextAccount(),
       pool: getNextAccount(),
       lpMint: getNextAccount(),
       aVaultLpMint: getNextAccount(),

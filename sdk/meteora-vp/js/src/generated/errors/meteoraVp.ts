@@ -14,15 +14,28 @@ import {
 } from '@solana/web3.js';
 import { METEORA_VP_PROGRAM_ADDRESS } from '../programs';
 
-/** DoubleSpend: Nullifier already exists */
-export const METEORA_VP_ERROR__DOUBLE_SPEND = 0x1770; // 6000
+/** TypeConversionFailed: Type conversion failed */
+export const METEORA_VP_ERROR__TYPE_CONVERSION_FAILED = 0x1770; // 6000
+/** CheckedCalculationOverflow: Checked Calculation overflowed */
+export const METEORA_VP_ERROR__CHECKED_CALCULATION_OVERFLOW = 0x1771; // 6001
+/** InvalidAmountByShare: Invalid amount by share */
+export const METEORA_VP_ERROR__INVALID_AMOUNT_BY_SHARE = 0x1772; // 6002
+/** InvalidUpscaledTokenAmount: Invalid upscaled token amount */
+export const METEORA_VP_ERROR__INVALID_UPSCALED_TOKEN_AMOUNT = 0x1773; // 6003
 
-export type MeteoraVpError = typeof METEORA_VP_ERROR__DOUBLE_SPEND;
+export type MeteoraVpError =
+  | typeof METEORA_VP_ERROR__CHECKED_CALCULATION_OVERFLOW
+  | typeof METEORA_VP_ERROR__INVALID_AMOUNT_BY_SHARE
+  | typeof METEORA_VP_ERROR__INVALID_UPSCALED_TOKEN_AMOUNT
+  | typeof METEORA_VP_ERROR__TYPE_CONVERSION_FAILED;
 
 let meteoraVpErrorMessages: Record<MeteoraVpError, string> | undefined;
 if (process.env.NODE_ENV !== 'production') {
   meteoraVpErrorMessages = {
-    [METEORA_VP_ERROR__DOUBLE_SPEND]: `Nullifier already exists`,
+    [METEORA_VP_ERROR__CHECKED_CALCULATION_OVERFLOW]: `Checked Calculation overflowed`,
+    [METEORA_VP_ERROR__INVALID_AMOUNT_BY_SHARE]: `Invalid amount by share`,
+    [METEORA_VP_ERROR__INVALID_UPSCALED_TOKEN_AMOUNT]: `Invalid upscaled token amount`,
+    [METEORA_VP_ERROR__TYPE_CONVERSION_FAILED]: `Type conversion failed`,
   };
 }
 

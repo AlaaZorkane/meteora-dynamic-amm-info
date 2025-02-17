@@ -1,3 +1,4 @@
+import type { Address } from "@solana/web3.js";
 import { type DestinationStream, type Logger, pino } from "pino";
 import { build } from "pino-pretty";
 
@@ -52,6 +53,10 @@ export function createLoggerWithTimestamp(name: string) {
 
 export function explorerUrl(tx: string, cluster = "devnet") {
   return `https://explorer.solana.com/tx/${tx}?cluster=${cluster}`;
+}
+
+export function meteoraDevUrl(pool: Address) {
+  return `https://devnet.meteora.ag/pools/${pool}`;
 }
 
 export function explorerLocalUrl(tx: string) {

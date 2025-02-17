@@ -6,17 +6,9 @@
       "name": "getVirtualPrice",
       "accounts": [
         {
-          "name": "payer",
-          "isMut": true,
-          "isSigner": true
-        },
-        {
           "name": "pool",
           "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "Pool account (PDA)"
-          ]
+          "isSigner": false
         },
         {
           "name": "lpMint",
@@ -81,8 +73,23 @@
   "errors": [
     {
       "code": 6000,
-      "name": "DoubleSpend",
-      "msg": "Nullifier already exists"
+      "name": "TypeConversionFailed",
+      "msg": "Type conversion failed"
+    },
+    {
+      "code": 6001,
+      "name": "CheckedCalculationOverflow",
+      "msg": "Checked Calculation overflowed"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAmountByShare",
+      "msg": "Invalid amount by share"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidUpscaledTokenAmount",
+      "msg": "Invalid upscaled token amount"
     }
   ]
 }
