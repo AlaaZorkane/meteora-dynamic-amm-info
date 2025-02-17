@@ -15,7 +15,12 @@ import {
   type Blockhash,
   type KeyPairSigner,
 } from "@solana/web3.js";
-import { createLogger, explorerUrl, meteoraDevUrl } from "./utils/helpers.ts";
+import {
+  createLogger,
+  explorerUrl,
+  getVirtualPriceFromLogs,
+  meteoraDevUrl,
+} from "./utils/helpers.ts";
 import { beforeAll, beforeEach, describe, it } from "vitest";
 import { assert } from "chai";
 import {
@@ -158,6 +163,18 @@ describe("Meteora Virtual Price Program", () => {
       await sendAndConfirm(signedTx, {
         commitment: "confirmed",
       });
+      const txRaw = await rpc
+        .getTransaction(tx, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        })
+        .send();
+
+      const virtualPrice = getVirtualPriceFromLogs(
+        txRaw?.meta?.logMessages ?? [],
+      );
+
+      log.info("virtual price: %s", virtualPrice);
       log.info("signature: %s", tx);
       log.info("explorer url: %s", explorerUrl(tx));
       log.info("pool url: %s", meteoraDevUrl(volatilePool));
@@ -256,6 +273,18 @@ describe("Meteora Virtual Price Program", () => {
       await sendAndConfirm(signedTx, {
         commitment: "confirmed",
       });
+      const txRaw = await rpc
+        .getTransaction(tx, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        })
+        .send();
+
+      const virtualPrice = getVirtualPriceFromLogs(
+        txRaw?.meta?.logMessages ?? [],
+      );
+
+      log.info("virtual price: %s", virtualPrice);
       log.info("signature: %s", tx);
       log.info("explorer url: %s", explorerUrl(tx));
       log.info("pool url: %s", meteoraDevUrl(stablePool));

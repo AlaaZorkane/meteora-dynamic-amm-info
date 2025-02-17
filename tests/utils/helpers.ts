@@ -1,3 +1,4 @@
+import { VIRTUAL_PRICE_PRECISION } from "@meteora-ag/dynamic-amm-sdk/dist/cjs/src/amm/constants";
 import type { Address } from "@solana/web3.js";
 import { type DestinationStream, type Logger, pino } from "pino";
 import { build } from "pino-pretty";
@@ -69,4 +70,16 @@ export function solFmLocalUrl(tx: string) {
 
 export function solscanLocalUrl(tx: string) {
   return `https://solscan.io/tx/${tx}?cluster=custom&customUrl=http://127.0.0.1:8899`;
+}
+
+// "virtual_price: 107576076"
+export function getVirtualPriceFromLogs(logs: readonly string[]): string {
+  const virtualPriceLog = logs.find((log) => log.includes("virtual_price"));
+  if (!virtualPriceLog) {
+    return "0";
+  }
+  return (
+    Number(virtualPriceLog.split("virtual_price: ")[1]) /
+    Number(VIRTUAL_PRICE_PRECISION)
+  ).toString();
 }

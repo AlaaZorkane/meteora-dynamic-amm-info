@@ -16,7 +16,7 @@ declare_id!("expo9shvoWz6Bi96TsomKkWTAWYAm4ywuzP2u8EAXaV");
 pub mod meteora_vp {
     use super::*;
 
-    pub fn get_virtual_price(ctx: Context<GetVirtualPriceAccounts>) -> Result<()> {
+    pub fn get_virtual_price(ctx: Context<GetVirtualPriceAccounts>) -> Result<u128> {
         _get_virtual_price(&ctx)
     }
 }

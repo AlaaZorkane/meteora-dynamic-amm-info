@@ -11,7 +11,7 @@ use crate::{
     stable_upscale_token_b, MeteoraVPErrors, VIRTUAL_PRICE_PRECISION,
 };
 
-pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> {
+pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<u128> {
     let pool_lp_supply = u128::from(ctx.accounts.lp_mint.supply);
 
     let on_chain_time: u64 = Clock::get()?
@@ -79,7 +79,7 @@ pub fn _get_virtual_price(ctx: &Context<GetVirtualPriceAccounts>) -> Result<()> 
     msg!("virtual_price: {}", virtual_price);
     msg!("virtual_price (display): {}", virtual_price_display);
 
-    Ok(())
+    Ok(virtual_price)
 }
 
 #[derive(Accounts)]
