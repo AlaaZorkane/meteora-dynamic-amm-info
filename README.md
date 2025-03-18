@@ -1,5 +1,3 @@
-<img src="https://pbs.twimg.com/profile_images/1848251049389228033/Pn4O9Vvk_400x400.jpg" alt="Exponent" width="100">
-
 # Meteora Dynamic Pools Virtual Price
 This program calculates the virtual price of any given meteora dynamic pool:
 
